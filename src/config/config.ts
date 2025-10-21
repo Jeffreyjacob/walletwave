@@ -1,0 +1,40 @@
+export interface AppConfig {
+  env: string;
+  port: number | string;
+  //   apiPrefix: string;
+  //   frontendUrls: {};
+  //   tokens: {
+  //     accessToken: {};
+  //     refreshToken: {};
+  //   };
+  security: {
+    cors: {
+      origin: string;
+      credentials: boolean;
+    };
+    rateLimit: {
+      windowMs: number;
+      max: number;
+    };
+  };
+}
+
+const getConfig = (): AppConfig => ({
+  env: process.env.NODE_ENV || 'development',
+  port: process.env.PORT || 8000,
+  security: {
+    cors: {
+      origin: '*',
+      credentials: true,
+    },
+    rateLimit: {
+      windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
+      max: parseInt(
+        process.env.NODE_ENV === 'development' ? '1000' : '100',
+        10
+      ),
+    },
+  },
+});
+
+export default getConfig;
