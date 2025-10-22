@@ -1,7 +1,7 @@
 export interface AppConfig {
   env: string;
   port: number | string;
-  //   apiPrefix: string;
+  apiPrefix: string;
   //   frontendUrls: {};
   //   tokens: {
   //     accessToken: {};
@@ -22,6 +22,7 @@ export interface AppConfig {
 const getConfig = (): AppConfig => ({
   env: process.env.NODE_ENV || 'development',
   port: process.env.PORT || 8000,
+  apiPrefix: process.env.API_PREFIX || '/api/v1',
   security: {
     cors: {
       origin: '*',

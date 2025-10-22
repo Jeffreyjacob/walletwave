@@ -1,4 +1,4 @@
-import express, { Application } from 'express';
+import express, { Application, Request, Response } from 'express';
 import dotenv from 'dotenv';
 import getConfig, { AppConfig } from './config/config';
 import cors from 'cors';
@@ -7,6 +7,10 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import { ErrorHandler } from './middleware/errorHandler';
 import { prisma } from './config/prismaConfig';
+import swaggerJSDoc from 'swagger-jsdoc';
+import { swaggerOptions } from './config/swaggerConfig';
+import swaggerUi from 'swagger-ui-express';
+import swaggerJsDoc from 'swagger-jsdoc';
 
 dotenv.config();
 
@@ -33,6 +37,21 @@ const startServer = async () => {
   app.use(cookieParser());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+
+  const swaggerSpec = swaggerJSDoc(swaggerOptions);
+
+  app.use(
+    `${config.apiPrefix}/docs`,
+    swaggerUi.serve,
+    swaggerUi.setup(swaggerSpec, {
+      explorer: true,
+      customSiteTitle: 'Wallet wave',
+    })
+  );
+
+  app.get(`${config.apiPrefix}/swagger.json`, (req: Request, res: Response) => {
+    res.setHeader('Content-Type', 'application/json'), res.send(swaggerSpec);
+  });
 
   app.use(ErrorHandler);
 
