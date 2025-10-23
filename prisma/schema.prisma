@@ -15,7 +15,7 @@ datasource db {
 
 
 model User {
-   id    String  @id @default(cuid())
+   id    String  @id @default(uuid())
    email  String    @unique
    password   String
    firstName   String
@@ -23,13 +23,14 @@ model User {
    wallet      Wallet?
    transacrions   Transaction[]  @relation("UserTransacions")
    auditLogs     AuditLog[]
+   tokens        Token[]
    createdAt     DateTime      @default(now())
    updatedAt      DateTime      @updatedAt
 }
 
 
 model Wallet {
-  id        String     @id @default(cuid())
+  id        String     @id @default(uuid())
   userId    String     @unique
   balance    Decimal   @default(0.0)
   currency   Currency  @default(USD)
@@ -42,7 +43,7 @@ model Wallet {
 }
 
 model Transaction {
-  id       String     @id @default(cuid())
+  id       String     @id @default(uuid())
   walletId    String
   userId      String
   type        TransactionType
@@ -60,7 +61,7 @@ model Transaction {
 
 
 model Ledger {
-  id     String   @id  @default(cuid())
+  id     String   @id  @default(uuid())
   walletId      String
   transactionId    String   @unique
   change    Decimal
@@ -72,13 +73,24 @@ model Ledger {
 }
 
 model AuditLog {
-  id    String   @id @default(cuid())
+  id    String   @id @default(uuid())
   userId    String
   action    String
   ipAddress String?
   details   Json?
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
+}
+
+model Token {
+   id String @id @default(uuid())
+   userId   String
+   user     User    @relation(fields: [userId],references: [id])
+   token    String
+   isRevoked    Boolean    @default(false)
+   isExpiredAt    DateTime
+   createdAt      DateTime    @default(now())
+   updatedAt      DateTime    @updatedAt
 }
 
 
