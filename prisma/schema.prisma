@@ -20,6 +20,8 @@ model User {
    password   String
    firstName   String
    lastName    String
+   stripeCustomerId   String?
+   stripeAccountId    String?
    wallet      Wallet?
    transacrions   Transaction[]  @relation("UserTransacions")
    auditLogs     AuditLog[]
@@ -35,6 +37,10 @@ model Wallet {
   balance    Decimal   @default(0.0)
   currency   Currency  @default(USD)
   walletRef  String    @unique
+  status     WalletStatus  @default(LOCKED)
+  chargesEnabled   Boolean @default(false)
+  payoutsEnabled   Boolean   @default(false)
+  detailSubmitted  Boolean   @default(false)
   user        User     @relation(fields: [userId],references: [id])
   transaction   Transaction[]   @relation("WalletTransactions")
   ledgers       Ledger[]
@@ -51,6 +57,7 @@ model Transaction {
   amount      Decimal
   reference   String     @unique
   description    String?
+  source         String?
   metadata       Json
   wallet         Wallet     @relation("WalletTransactions",fields: [walletId],references: [id])
   user           User       @relation("UserTransacions",fields: [userId],references: [id])
@@ -91,6 +98,12 @@ model Token {
    isExpiredAt    DateTime
    createdAt      DateTime    @default(now())
    updatedAt      DateTime    @updatedAt
+}
+
+enum WalletStatus {
+   LOCKED
+   UNDERREVIEW
+   ACTIVE
 }
 
 

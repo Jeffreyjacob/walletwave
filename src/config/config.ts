@@ -23,6 +23,11 @@ export interface AppConfig {
       max: number;
     };
   };
+  stripe: {
+    stripe_secret_key: string;
+    stripe_connect_webhook: string;
+    stripe_payment_webhook: string;
+  };
 }
 
 const getConfig = (): AppConfig => ({
@@ -51,6 +56,11 @@ const getConfig = (): AppConfig => ({
         10
       ),
     },
+  },
+  stripe: {
+    stripe_secret_key: process.env.STRIPE_API_KEY as string,
+    stripe_connect_webhook: process.env.STRIPE_CONNECT_WEBHOOK as string,
+    stripe_payment_webhook: process.env.STRIPE_PAYMENT_WEBHOOK as string,
   },
 });
 

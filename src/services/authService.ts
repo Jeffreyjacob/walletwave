@@ -6,11 +6,13 @@ import { generateWalletRef } from '../utils/helper';
 import { GenerateToken, setTokenCookie } from '../utils/token.utils';
 import { SaveRefreshToken } from '../middleware/authMiddleware';
 import { Response } from 'express';
+import { stripe } from '../utils/stripe';
 
 export class AuthService {
   private prisma = prisma;
+  private stripe = stripe;
 
-  async RegisterUser(data: IUser['register']) {
+  async RegisterUser({ data }: { data: IUser['register'] }) {
     const findExistingUser = await this.prisma.user.findFirst({
       where: {
         email: data.email,
@@ -32,6 +34,20 @@ export class AuthService {
         },
       });
 
+      const customer = await this.stripe.customers.create({
+        email: data.email,
+        name: `${data.firstName} ${data.lastName}`,
+      });
+
+      const account = await this.stripe.accounts.create({
+        type: 'express',
+        email: data.email,
+        capabilities: {
+          transfers: { requested: true },
+          card_payments: { requested: true },
+        },
+      });
+
       const walletRef = generateWalletRef();
 
       const wallet = await tx.wallet.create({
@@ -39,6 +55,23 @@ export class AuthService {
           userId: user.id,
           walletRef,
         },
+      });
+
+      await tx.user.update({
+        where: {
+          id: user.id,
+        },
+        data: {
+          stripeAccountId: account.id,
+          stripeCustomerId: customer.id,
+        },
+      });
+
+      const link = await this.stripe.accountLinks.create({
+        account: account.id,
+        refresh_url: ``,
+        return_url: ``,
+        type: 'account_onboarding',
       });
 
       await tx.auditLog.create({
@@ -51,11 +84,13 @@ export class AuthService {
         },
       });
 
-      return { user, wallet };
+      return { link };
     });
 
     return {
-      message: 'User has been created successfully!',
+      message:
+        'User has been created, also your wallet, click on the link to finish your kyc and verify your wallet for transfer and withdrawal',
+      data: result.link,
     };
   }
 

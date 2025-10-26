@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node dist/server.js",
-    "dev": "nodemon --exec \"npx ts-node ./src/server.ts\" ",
+    "dev:server": "nodemon --exec \"npx ts-node ./src/server.ts\" ",
     "dev:worker": "nodemon --exec \"npx ts-node ./src/worker.ts \" ",
     "build": "npx tsc --skipLibCheck",
     "worker": "node dist/worker.ts",
@@ -40,6 +40,7 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.1",
     "nodemailer": "^7.0.9",
+    "stripe": "^18.3.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
   },

@@ -11,6 +11,8 @@ import swaggerJSDoc from 'swagger-jsdoc';
 import { swaggerOptions } from './config/swaggerConfig';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsDoc from 'swagger-jsdoc';
+import authRoutes from './routes/authRoutes';
+import { handleStripeConnectWebhook } from './webhooks/stripeConnect';
 
 dotenv.config();
 
@@ -23,6 +25,12 @@ const startServer = async () => {
       origin: config.security.cors.origin,
       credentials: config.security.cors.credentials,
     })
+  );
+
+  app.use(
+    `${config.apiPrefix}/webhook/stripe/connect`,
+    express.raw({ type: 'application/json' }),
+    handleStripeConnectWebhook
   );
 
   app.use(
@@ -52,6 +60,7 @@ const startServer = async () => {
   app.get(`${config.apiPrefix}/swagger.json`, (req: Request, res: Response) => {
     res.setHeader('Content-Type', 'application/json'), res.send(swaggerSpec);
   });
+  app.use(`${config.apiPrefix}/auth`, authRoutes);
 
   app.use(ErrorHandler);
 
