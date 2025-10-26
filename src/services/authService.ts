@@ -42,6 +42,8 @@ export class AuthService {
       const account = await this.stripe.accounts.create({
         type: 'express',
         email: data.email,
+        country: 'US',
+        default_currency: 'usd',
         capabilities: {
           transfers: { requested: true },
           card_payments: { requested: true },
