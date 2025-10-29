@@ -18,7 +18,7 @@ export const swaggerDefinition: SwaggerDefinition = {
         process.env.NODE_ENV === 'production' ? 'Production' : 'Local',
     },
   ],
-  componets: {
+  components: {
     securitySchemes: {
       AccessToken: {
         type: 'apiKey',
@@ -58,7 +58,7 @@ export const swaggerDefinition: SwaggerDefinition = {
       },
       RegisterUserResponse: {
         type: 'object',
-        properies: {
+        properties: {
           success: {
             type: 'boolean',
             example: true,
@@ -87,7 +87,7 @@ export const swaggerDefinition: SwaggerDefinition = {
       },
       LoginResponse: {
         type: 'object',
-        properites: {
+        properties: {
           success: {
             type: 'boolean',
             example: true,

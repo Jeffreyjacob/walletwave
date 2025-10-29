@@ -7,7 +7,9 @@ import { GenerateToken, setTokenCookie } from '../utils/token.utils';
 import { SaveRefreshToken } from '../middleware/authMiddleware';
 import { Response } from 'express';
 import { stripe } from '../utils/stripe';
+import getConfig from '../config/config';
 
+const config = getConfig();
 export class AuthService {
   private prisma = prisma;
   private stripe = stripe;
@@ -23,23 +25,22 @@ export class AuthService {
       throw new AppError('email already exist', 400);
     }
 
-    const result = await this.prisma.$transaction(async (tx) => {
-      // hashPassword
-      const hashPassword = bcrypt.hashSync(data.password, 10);
+    // hashPassword
+    const hashPassword = bcrypt.hashSync(data.password, 10);
 
-      const user = await tx.user.create({
-        data: {
-          ...data,
-          password: hashPassword,
-        },
-      });
+    const user = await prisma.user.create({
+      data: {
+        ...data,
+        password: hashPassword,
+      },
+    });
 
-      const customer = await this.stripe.customers.create({
+    const [customer, account] = await Promise.all([
+      this.stripe.customers.create({
         email: data.email,
         name: `${data.firstName} ${data.lastName}`,
-      });
-
-      const account = await this.stripe.accounts.create({
+      }),
+      this.stripe.accounts.create({
         type: 'express',
         email: data.email,
         country: 'US',
@@ -48,10 +49,19 @@ export class AuthService {
           transfers: { requested: true },
           card_payments: { requested: true },
         },
-      });
+      }),
+    ]);
 
-      const walletRef = generateWalletRef();
+    const link = await this.stripe.accountLinks.create({
+      account: account.id,
+      refresh_url: `${config.urls.backend_url}${config.apiPrefix}/wallet/onBoardingLink?accountId=${account.id}`,
+      return_url: `${config.urls.frontend_url}`,
+      type: 'account_onboarding',
+    });
 
+    const walletRef = generateWalletRef();
+
+    const result = await this.prisma.$transaction(async (tx) => {
       const wallet = await tx.wallet.create({
         data: {
           userId: user.id,
@@ -69,13 +79,6 @@ export class AuthService {
         },
       });
 
-      const link = await this.stripe.accountLinks.create({
-        account: account.id,
-        refresh_url: ``,
-        return_url: ``,
-        type: 'account_onboarding',
-      });
-
       await tx.auditLog.create({
         data: {
           userId: user.id,
@@ -85,14 +88,12 @@ export class AuthService {
           },
         },
       });
-
-      return { link };
     });
 
     return {
       message:
         'User has been created, also your wallet, click on the link to finish your kyc and verify your wallet for transfer and withdrawal',
-      data: result.link,
+      data: link,
     };
   }
 

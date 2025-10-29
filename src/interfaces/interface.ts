@@ -10,3 +10,12 @@ export interface IUser {
     password: string;
   };
 }
+
+export interface IWallet {
+  generateOnBoardingLink: {
+    accountId: string;
+  };
+  fundWallet: {
+    amount: number;
+  };
+}

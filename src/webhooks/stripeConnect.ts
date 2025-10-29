@@ -40,13 +40,22 @@ const handleAccountUpdated = async (account: Stripe.Account) => {
   }
 };
 
-export const handleStripeConnectWebhook = async ({
-  req,
-  res,
-}: {
-  req: Request;
-  res: Response;
-}) => {
+const handleCapabilityUpdated = async (capability: Stripe.Capability) => {
+  try {
+    const account = await stripe.accounts.retrieve(
+      capability.account as string
+    );
+
+    await handleAccountUpdated(account);
+  } catch (error: any) {
+    console.error('Error handling capability update:', error);
+  }
+};
+
+export const handleStripeConnectWebhook = async (
+  req: Request,
+  res: Response
+) => {
   const sig = req.headers['stripe-signature'];
   let event: Stripe.Event;
 
@@ -67,6 +76,9 @@ export const handleStripeConnectWebhook = async ({
     switch (event.type) {
       case 'account.updated':
         await handleAccountUpdated(event.data.object as Stripe.Account);
+        break;
+      case 'capability.updated':
+        await handleCapabilityUpdated(event.data.object as Stripe.Capability);
         break;
     }
 

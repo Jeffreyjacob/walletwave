@@ -34,14 +34,14 @@ model User {
 model Wallet {
   id        String     @id @default(uuid())
   userId    String     @unique
-  balance    Decimal   @default(0.0)
+  balance    Decimal   @default(0)
   currency   Currency  @default(USD)
-  walletRef  String    @unique
+  walletRef  String    @unique  @default(cuid())
   status     WalletStatus  @default(LOCKED)
   chargesEnabled   Boolean @default(false)
   payoutsEnabled   Boolean   @default(false)
   detailSubmitted  Boolean   @default(false)
-  user        User     @relation(fields: [userId],references: [id])
+  user        User     @relation(fields: [userId],references: [id],onDelete:Cascade )
   transaction   Transaction[]   @relation("WalletTransactions")
   ledgers       Ledger[]
   createdAt     DateTime     @default(now())
@@ -55,10 +55,12 @@ model Transaction {
   type        TransactionType
   status      TransactionStatus   @default(PENDING)
   amount      Decimal
-  reference   String     @unique
+  stripeSessionId   String?
+  stripePaymentIntentId   String?
+  expiredCheckoutSessionJobId    String?
   description    String?
-  source         String?
-  metadata       Json
+  source         TransactionSource  @default(STRIPE)
+  metadata       Json?
   wallet         Wallet     @relation("WalletTransactions",fields: [walletId],references: [id])
   user           User       @relation("UserTransacions",fields: [userId],references: [id])
   ledger         Ledger?
@@ -85,14 +87,14 @@ model AuditLog {
   action    String
   ipAddress String?
   details   Json?
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id],onDelete: Cascade)
   createdAt DateTime @default(now())
 }
 
 model Token {
    id String @id @default(uuid())
    userId   String
-   user     User    @relation(fields: [userId],references: [id])
+   user     User    @relation(fields: [userId],references: [id],onDelete: Cascade)
    token    String
    isRevoked    Boolean    @default(false)
    isExpiredAt    DateTime
@@ -126,4 +128,11 @@ enum TransactionStatus {
   PENDING
   SUCCESS
   FAILED
+}
+
+enum TransactionSource {
+  STRIPE 
+  BANK
+  INTERNAL
+  ADMIN_ADJUSTMENT
 }
