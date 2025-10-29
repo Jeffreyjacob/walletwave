@@ -10,10 +10,10 @@ import { prisma } from './config/prismaConfig';
 import swaggerJSDoc from 'swagger-jsdoc';
 import { swaggerOptions } from './config/swaggerConfig';
 import swaggerUi from 'swagger-ui-express';
-import swaggerJsDoc from 'swagger-jsdoc';
 import authRoutes from './routes/authRoutes';
 import { handleStripeConnectWebhook } from './webhooks/stripeConnect';
 import walletRoutes from './routes/walletRoutes';
+import { handleStripePaymentWebhook } from './webhooks/stripePayment';
 
 dotenv.config();
 
@@ -32,6 +32,12 @@ const startServer = async () => {
     `${config.apiPrefix}/webhook/stripe/connect`,
     express.raw({ type: 'application/json' }),
     handleStripeConnectWebhook
+  );
+
+  app.post(
+    `${config.apiPrefix}/webhook/stripe/payment`,
+    express.raw({ type: 'application/json' }),
+    handleStripePaymentWebhook
   );
 
   app.use(

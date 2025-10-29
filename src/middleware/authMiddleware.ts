@@ -1,4 +1,4 @@
-import { User } from '@prisma/client';
+import { User, WalletStatus } from '@prisma/client';
 import { NextFunction, Request, Response } from 'express';
 import { AppError } from '../utils/appError';
 import {
@@ -147,6 +147,41 @@ export const RefreshAccessToken = async ({
     // set new access and refresh token in response
     setTokenCookie(res, accessToken, refreshToken);
     req.user = user;
+    next();
+  } catch (error: any) {
+    next(error);
+  }
+};
+
+export const CheckWalletStatus = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user.id;
+
+    const wallet = await prisma.wallet.findFirst({
+      where: {
+        userId,
+      },
+    });
+
+    if (!wallet) {
+      throw new AppError('Unable to find user wallet', 404);
+    }
+
+    if (wallet.status === WalletStatus.LOCKED) {
+      throw new AppError(
+        'this wallet is locked, Please check wallet information',
+        400
+      );
+    }
+
+    if (wallet.status === WalletStatus.UNDERREVIEW) {
+      throw new AppError('this wallet is under review', 400);
+    }
+
     next();
   } catch (error: any) {
     next(error);

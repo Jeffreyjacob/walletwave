@@ -1,7 +1,10 @@
 import { NextFunction, Request, Response } from 'express';
 import { WalletService } from '../services/walletServices';
 import { AsyncHandler } from '../utils/asyncHandler';
-import { generateOnBoardingLinkValidators } from '../validators/wallet.Validators';
+import {
+  fundWalletValidators,
+  generateOnBoardingLinkValidators,
+} from '../validators/wallet.Validators';
 
 export class WalletController {
   private static walletServices = new WalletService();
@@ -21,6 +24,22 @@ export class WalletController {
         });
 
       return res.redirect(result.url);
+    }
+  );
+
+  static FundWalletController = AsyncHandler(
+    async (req: Request, res: Response, next: NextFunction) => {
+      const validatedBody = await fundWalletValidators(req.body);
+
+      const result = await WalletController.walletServices.fundWallet({
+        userId: req.user.id,
+        data: validatedBody,
+      });
+
+      return res.status(200).json({
+        success: true,
+        ...result,
+      });
     }
   );
 }

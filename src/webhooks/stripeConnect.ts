@@ -80,6 +80,10 @@ export const handleStripeConnectWebhook = async (
       case 'capability.updated':
         await handleCapabilityUpdated(event.data.object as Stripe.Capability);
         break;
+
+      default:
+        console.log(`Unhandled event type ${event.type}`);
+        break;
     }
 
     return res.status(200).json({ recieved: true });

@@ -98,6 +98,26 @@ export const swaggerDefinition: SwaggerDefinition = {
           },
         },
       },
+      FundWalletRequest: {
+        type: 'object',
+        required: ['amount'],
+        properties: {
+          amount: 'integer',
+          example: 150,
+        },
+      },
+      FundWalletResponse: {
+        type: 'object',
+        properties: {
+          success: {
+            type: 'boolean',
+            example: true,
+          },
+          url: {
+            type: 'string',
+          },
+        },
+      },
       ErrorResponse: {
         type: 'object',
         properties: {

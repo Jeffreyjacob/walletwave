@@ -11,3 +11,13 @@ export const generateOnBoardingLinkValidators = async (
 
   return validators.validateAsync(reqBody, { abortEarly: false });
 };
+
+export const fundWalletValidators = async (
+  reqBody: IWallet['fundWallet']
+): Promise<IWallet['fundWallet']> => {
+  const validators: ObjectSchema<IWallet['fundWallet']> = Joi.object({
+    amount: Joi.number().min(1).required(),
+  });
+
+  return validators.validateAsync(reqBody, { abortEarly: false });
+};
