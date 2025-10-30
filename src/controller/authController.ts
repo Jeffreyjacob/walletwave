@@ -45,6 +45,7 @@ export class AuthController {
 
   static RefreshAccessTokenController = AsyncHandler(
     async (req: Request, res: Response, next: NextFunction) => {
+      console.log(req);
       await RefreshAccessToken({ req, res, next });
 
       return res.status(200).json({

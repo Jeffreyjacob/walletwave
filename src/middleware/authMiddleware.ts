@@ -33,7 +33,7 @@ export const Protect = async (
 
     const user = await prisma.user.findUnique({
       where: {
-        id: payload.id,
+        id: payload.userId,
       },
     });
 
@@ -95,9 +95,11 @@ export const RefreshAccessToken = async ({
 
     const decoded = verifyRefreshToken(refresh);
 
+    console.log(decoded.userId, 'decoded');
+
     const user = await prisma.user.findUnique({
       where: {
-        id: decoded.id,
+        id: decoded.userId,
       },
     });
 

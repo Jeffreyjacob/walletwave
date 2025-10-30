@@ -9,7 +9,7 @@ export interface TokenResponse {
 }
 
 export interface TokenPayload {
-  id: string;
+  userId: string;
 }
 
 const config = getConfig();
@@ -64,7 +64,7 @@ export const setTokenCookie = (
   res.cookie('accessToken', accessToken, {
     secure: config.env === 'production' ? true : false,
     httpOnly: true,
-    sameSite: 'none',
+    sameSite: config.env === 'production' ? 'none' : 'strict',
     maxAge: 15 * 60 * 1000,
     path: '/',
   });
@@ -72,7 +72,7 @@ export const setTokenCookie = (
   res.cookie('refreshToken', refreshToken, {
     secure: config.env === 'production' ? true : false,
     httpOnly: true,
-    sameSite: 'none',
+    sameSite: config.env === 'production' ? 'none' : 'strict',
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: '/',
   });
@@ -82,7 +82,7 @@ export const clearTokenCookie = (res: Response) => {
   res.clearCookie('accessToken', {
     secure: config.env === 'production' ? true : false,
     httpOnly: true,
-    sameSite: 'none',
+    sameSite: config.env === 'production' ? 'none' : 'strict',
     maxAge: 15 * 60 * 1000,
     path: '/',
   });
@@ -90,7 +90,7 @@ export const clearTokenCookie = (res: Response) => {
   res.clearCookie('refreshToken', {
     secure: config.env === 'production' ? true : false,
     httpOnly: true,
-    sameSite: 'none',
+    sameSite: config.env === 'production' ? 'none' : 'strict',
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: '/',
   });

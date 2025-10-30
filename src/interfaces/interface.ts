@@ -18,4 +18,9 @@ export interface IWallet {
   fundWallet: {
     amount: number;
   };
+  transferToWallet: {
+    amount: number;
+    recieveWalletRef: string;
+    description?: string;
+  };
 }

@@ -102,8 +102,11 @@ export const swaggerDefinition: SwaggerDefinition = {
         type: 'object',
         required: ['amount'],
         properties: {
-          amount: 'integer',
-          example: 150,
+          amount: {
+            type: 'integer',
+            example: 150,
+            description: 'Amount to fund the wallet (in Naira, USD, etc.)',
+          },
         },
       },
       FundWalletResponse: {

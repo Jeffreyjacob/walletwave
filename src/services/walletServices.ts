@@ -1,10 +1,11 @@
-import { TransactionType, User } from '@prisma/client';
+import { TransactionType, User, WalletStatus } from '@prisma/client';
 import getConfig from '../config/config';
 import { prisma } from '../config/prismaConfig';
 import { IWallet } from '../interfaces/interface';
 import { stripe } from '../utils/stripe';
 import { AppError } from '../utils/appError';
 import { getExpiredCheckoutQueue } from '../jobs/queue/expiredCheckoutSession';
+import { Decimal } from '@prisma/client/runtime/library';
 
 const config = getConfig();
 export class WalletService {
@@ -43,11 +44,9 @@ export class WalletService {
       throw new AppError("user wallet can't be found", 404);
     }
 
-    const amount = Math.round(Number(data.amount) * 100);
-
     const transaction = await this.prisma.transaction.create({
       data: {
-        amount: amount,
+        amount: data.amount,
         userId,
         type: TransactionType.FUND,
         walletId: wallet.id,
@@ -70,7 +69,7 @@ export class WalletService {
                 name: 'Wallet Funding',
                 description: `Funding wallet #${wallet.walletRef}`,
               },
-              unit_amount: amount,
+              unit_amount: Math.round(Number(data.amount) * 100),
             },
             quantity: 1,
           },
@@ -121,4 +120,158 @@ export class WalletService {
       url: session.url,
     };
   }
+
+  async internalTransfer({
+    data,
+    userId,
+  }: {
+    data: IWallet['transferToWallet'];
+    userId: User['id'];
+  }) {
+    const transferAmount = new Decimal(data.amount);
+
+    return await this.prisma.$transaction(async (tx) => {
+      const senderWallet = await tx.wallet.findUnique({
+        where: { userId },
+        include: { user: true },
+      });
+
+      const recieveWallet = await tx.wallet.findUnique({
+        where: { walletRef: data.recieveWalletRef },
+        include: { user: true },
+      });
+
+      if (!senderWallet) {
+        throw new AppError(
+          'Something went wrong, Please check your wallet',
+          400
+        );
+      }
+
+      if (!recieveWallet) {
+        throw new AppError(
+          'Invalid walletRef, Please check reciever wallet ref and try again',
+          400
+        );
+      }
+
+      if (recieveWallet.status !== WalletStatus.ACTIVE) {
+        throw new AppError(
+          "Reciever wallet can't recieve any money right now, Please try again",
+          400
+        );
+      }
+
+      if (senderWallet.balance.lt(transferAmount)) {
+        throw new AppError('Insufficient balance', 400);
+      }
+
+      const senderTx = await tx.transaction.create({
+        data: {
+          walletId: senderWallet.id,
+          userId: senderWallet.userId,
+          amount: transferAmount.negated(),
+          type: 'TRANSFER',
+          status: 'SUCCESS',
+          description: data.description ? data.description : '',
+          metadata: {
+            direction: 'debit',
+            to: data.recieveWalletRef,
+          },
+        },
+      });
+
+      const recieverTx = await tx.transaction.create({
+        data: {
+          walletId: recieveWallet.id,
+          userId: recieveWallet.userId,
+          amount: transferAmount,
+          type: 'TRANSFER',
+          status: 'SUCCESS',
+          description: data.description ? data.description : '',
+          metadata: {
+            direction: 'credit',
+            from: senderWallet.walletRef,
+          },
+        },
+      });
+
+      const senderNewBalance = senderWallet.balance.minus(transferAmount);
+      const receiverNewBalance = recieveWallet.balance.plus(transferAmount);
+
+      await tx.wallet.update({
+        where: { id: senderWallet.id },
+        data: { balance: senderNewBalance },
+      });
+
+      await tx.wallet.update({
+        where: { id: recieveWallet.id },
+        data: { balance: receiverNewBalance },
+      });
+
+      await tx.ledger.createMany({
+        data: [
+          {
+            walletId: senderWallet.id,
+            transactionId: senderTx.id,
+            change: transferAmount.negated(),
+            balanceBefore: senderWallet.balance,
+            balanceAfter: senderNewBalance,
+          },
+          {
+            walletId: recieveWallet.id,
+            transactionId: recieverTx.id,
+            change: transferAmount,
+            balanceBefore: recieveWallet.balance,
+            balanceAfter: receiverNewBalance,
+          },
+        ],
+      });
+
+      await tx.auditLog.createMany({
+        data: [
+          {
+            userId: senderWallet.userId,
+            action: 'TRANSFER_SENT',
+            details: {
+              amount: data.amount,
+              to: data.recieveWalletRef,
+              transactionId: senderTx.id,
+            },
+          },
+          {
+            userId: recieveWallet.userId,
+            action: 'TRANSFER_RECIEVED',
+            details: {
+              amount: data.amount,
+              from: senderWallet.walletRef,
+              transactionId: recieverTx.id,
+            },
+          },
+        ],
+      });
+
+      return {
+        message: 'Transfer successful',
+        senderBalance: senderNewBalance,
+        recieveBalance: receiverNewBalance,
+      };
+    });
+  }
+
+  async getWallet({ userId }: { userId: User['id'] }) {
+    const wallet = this.prisma.wallet.findUnique({
+      where: {
+        userId,
+      },
+    });
+
+    if (!wallet) {
+      throw new AppError('Unable to find wallet', 400);
+    }
+
+    return wallet;
+  }
+
+  async verifyWallet({ userId }: { userId: User['id'] }) {}
 }

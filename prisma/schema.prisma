@@ -36,7 +36,7 @@ model Wallet {
   userId    String     @unique
   balance    Decimal   @default(0)
   currency   Currency  @default(USD)
-  walletRef  String    @unique  @default(cuid())
+  walletRef  String    @unique  
   status     WalletStatus  @default(LOCKED)
   chargesEnabled   Boolean @default(false)
   payoutsEnabled   Boolean   @default(false)
