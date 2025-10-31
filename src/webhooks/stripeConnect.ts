@@ -52,6 +52,143 @@ const handleCapabilityUpdated = async (capability: Stripe.Capability) => {
   }
 };
 
+const handlePayoutPaid = async (event: Stripe.Payout) => {
+  const { transactionId, walletId } = event.metadata!;
+
+  const transaction = await prisma.transaction.findUnique({
+    where: {
+      id: transactionId,
+    },
+  });
+
+  if (!transaction) {
+    console.log('Unable to find transaction');
+    return;
+  }
+
+  const wallet = await prisma.wallet.findUnique({
+    where: {
+      id: walletId,
+    },
+  });
+
+  if (!wallet) {
+    console.log('Unable to find wallet');
+    return;
+  }
+
+  await prisma.$transaction(async (tx) => {
+    tx.transaction.update({
+      where: {
+        id: transaction.id,
+      },
+      data: {
+        status: 'SUCCESS',
+      },
+    });
+
+    tx.ledger.create({
+      data: {
+        walletId,
+        transactionId: transaction.id,
+        change: event.amount / 100,
+        balanceBefore: wallet.balance.plus(event.amount / 100),
+        balanceAfter: wallet.balance,
+      },
+    });
+
+    tx.auditLog.create({
+      data: {
+        userId: wallet.userId,
+        action: 'WITHDRAW_SUCCESS',
+        details: {
+          payoutId: event.id,
+        },
+      },
+    });
+  });
+  console.log(`Payout ${event.id} marked as SUCCESS`);
+};
+
+const handlePayoutFailed = async (event: Stripe.Payout) => {
+  const { transactionId, walletId } = event.metadata!;
+
+  const transaction = await prisma.transaction.findUnique({
+    where: {
+      id: transactionId,
+    },
+  });
+
+  if (!transaction) {
+    console.log('Unable to find transaction');
+    return;
+  }
+
+  const wallet = await prisma.wallet.findUnique({
+    where: {
+      id: walletId,
+    },
+  });
+
+  if (!wallet) {
+    console.log('Unable to find wallet');
+    return;
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.transaction.update({
+      where: {
+        id: transaction.id,
+      },
+      data: {
+        status: 'FAILED',
+      },
+    });
+
+    await tx.wallet.update({
+      where: {
+        id: wallet.id,
+      },
+      data: {
+        balance: { increment: transaction.amount },
+      },
+    });
+
+    await tx.ledger.create({
+      data: {
+        walletId: wallet.id,
+        transactionId: transaction.id,
+        change: event.amount,
+        balanceBefore: wallet.balance,
+        balanceAfter: wallet.balance.plus(transaction.amount),
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        userId: wallet.userId,
+        action: 'FAILED WITHDRAW',
+        details: {
+          payoutid: event.id,
+        },
+      },
+    });
+  });
+
+  const metadata = (transaction.metadata ?? {}) as Record<string, any>;
+  const transferId = metadata?.transferId;
+
+  if (!transferId) {
+    throw new Error('Transfer ID not found in transaction metadata');
+  }
+
+  await stripe.transfers.createReversal(transferId, {
+    amount: Math.round(Number(transaction.amount) * 100),
+    metadata: { reason: 'Payout failed - reversed to platform' },
+  });
+  console.log(`Payout ${event.id} failed - transfer reversed`);
+};
+
 export const handleStripeConnectWebhook = async (
   req: Request,
   res: Response
@@ -79,6 +216,14 @@ export const handleStripeConnectWebhook = async (
         break;
       case 'capability.updated':
         await handleCapabilityUpdated(event.data.object as Stripe.Capability);
+        break;
+
+      case 'payout.paid':
+        await handlePayoutPaid(event.data.object as Stripe.Payout);
+        break;
+
+      case 'payout.failed':
+        await handlePayoutFailed(event.data.object as Stripe.Payout);
         break;
 
       default:

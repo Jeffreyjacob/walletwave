@@ -23,4 +23,8 @@ export interface IWallet {
     recieveWalletRef: string;
     description?: string;
   };
+  walletPayout: {
+    amount: number;
+    description?: string;
+  };
 }

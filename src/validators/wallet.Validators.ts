@@ -21,3 +21,15 @@ export const fundWalletValidators = async (
 
   return validators.validateAsync(reqBody, { abortEarly: false });
 };
+
+export const transferToWalletValidators = async (
+  reqBody: IWallet['transferToWallet']
+) => {
+  const validators: ObjectSchema<IWallet['transferToWallet']> = Joi.object({
+    amount: Joi.number().min(1).required(),
+    recieveWalletRef: Joi.string().required(),
+    description: Joi.string().optional(),
+  });
+
+  return validators.validateAsync(reqBody, { abortEarly: false });
+};

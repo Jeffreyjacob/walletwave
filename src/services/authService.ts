@@ -49,6 +49,11 @@ export class AuthService {
           transfers: { requested: true },
           card_payments: { requested: true },
         },
+        settings: {
+          payouts: {
+            schedule: { interval: 'manual' },
+          },
+        },
       }),
     ]);
 
